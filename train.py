@@ -36,8 +36,9 @@ tf.logging.set_verbosity(tf.logging.DEBUG)
 FLAGS = tf.app.flags.FLAGS
 
 # Define the model and data directories i.e. model_dir where model will be saved
-tf.app.flags.DEFINE_string(flag_name='model_dir', default_value='', docstring='')
-tf.app.flags.DEFINE_string(flag_name='data_dir', default_value='', docstring='')
+tf.app.flags.DEFINE_string(flag_name='model_dir', default_value='', docstring='A directory where the model will be saved')
+tf.app.flags.DEFINE_string(flag_name='test_mat', default_value='', docstring='A testing matrix to evaluate the model')
+tf.app.flags.DEFINE_string(flag_name='train_mat', default_value='', docstring='A training dataset to train the model')
 
 
 # In the future it may be worth parameterising this with an ini file
@@ -74,6 +75,10 @@ def experiment_fn(run_config, params):
     estimator = get_estimator(run_config, params)
     
     # Setup data loaders
+    
+    trainmat = FLAGS.tain_mat # Doe we have to load it into one hot encoding or is it already done?
+    testmat = FLAGS.test_mat
+    
     danq_train = train_input_fn, train_input_hook = get_train_inputs(
             batch_size=100, data=trainmat, test=False)
     
