@@ -11,8 +11,6 @@ https://github.com/tensorflow/tensorflow/blob/r1.3/tensorflow
 Refer to https://medium.com/onfido-tech/higher-level-apis-in-tensorflow-67bfb602e6c0
 Basically, we will use high level tensorflow's API: Estimator + Experiment + Dataset
 '''
-from __future__ import division, print_function
-
 import tensorflow as tf
 from tensorflow.contrib.learn import learn_runner
 from tensorflow.contrib import rnn
@@ -21,6 +19,7 @@ from tensorflow.contrib import slim
 import numpy as np
 import h5py
 import scipy.io
+import argparse
 
 
 # tf needs >= 1.3.0
@@ -33,12 +32,12 @@ tf.logging.set_verbosity(tf.logging.DEBUG)
 # is to write demo code. It may be better for the future to implement arg parsing
 # with argparse in the future if this code becomes stable
 
-FLAGS = tf.app.flags.FLAGS
+# FLAGS = tf.app.flags.FLAGS
 
 # Define the model and data directories i.e. model_dir where model will be saved
-tf.app.flags.DEFINE_string(flag_name='model_dir', default_value='', docstring='A directory where the model will be saved')
-tf.app.flags.DEFINE_string(flag_name='test_mat', default_value='', docstring='A testing matrix to evaluate the model')
-tf.app.flags.DEFINE_string(flag_name='train_mat', default_value='', docstring='A training dataset to train the model')
+# tf.app.flags.DEFINE_string(flag_name='model_dir', default_value='', docstring='A directory where the model will be saved')
+# tf.app.flags.DEFINE_string(flag_name='test_mat', default_value='', docstring='A testing matrix to evaluate the model')
+# tf.app.flags.DEFINE_string(flag_name='train_mat', default_value='', docstring='A training dataset to train the model')
 
 
 # In the future it may be worth parameterising this with an ini file
@@ -76,7 +75,7 @@ def experiment_fn(run_config, params):
     
     # Setup data loaders
     
-    trainmat = FLAGS.tain_mat # Doe we have to load it into one hot encoding or is it already done?
+    trainmat = FLAGS.tain_mat
     testmat = FLAGS.test_mat
     
     danq_train = train_input_fn, train_input_hook = get_train_inputs(
@@ -326,6 +325,11 @@ def get_train_inputs(batch_size, data, test=False):
 
 # Run script ##############################################
 if __name__ == "__main__":
-    tf.app.run(
+	parser = argparse.ArgumentParser()
+	parser.add_argument("--model_dir", default=".")
+	parser.add_argument("--test_mat", default=".")
+	parser.add_argument("--train_mat", default=".")
+	FLAGS, _ = parser.parse_known_args()
+	tf.app.run(
         main=run_experiment
     )
