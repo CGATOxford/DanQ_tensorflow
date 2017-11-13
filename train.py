@@ -49,7 +49,7 @@ def run_experiment(argv=None):
     params = tf.contrib.training.HParams(
         learning_rate=0.01,
         n_classes=919,
-        train_steps=5000,
+        train_steps=1284,
         min_eval_frequency=100)
     
     # set the run config and directory to save the model and stats
@@ -79,10 +79,10 @@ def experiment_fn(run_config, params):
     testmat = scipy.io.loadmat(FLAGS.test_mat)
     
     danq_train = train_input_fn, train_input_hook = get_train_inputs(
-            batch_size=100, data=trainmat, test=False)
+            batch_size=1284, data=trainmat, test=False)
     
     danq_test = eval_input_fn, eval_input_hook = get_train_inputs(
-            batch_size=100, data=testmat, test=True)
+            batch_size=1284, data=testmat, test=True)
     
     # Define the experiment
 
@@ -210,6 +210,7 @@ def architecture(inputs, is_training, scope='DanQNN'):
         brnn = tf.layers.dropout(brnn, rate=0.5,training=mode == tf.estimator.ModeKeys.TRAIN)
 
         brnn = tf.contrib.layers.flatten(brnn)
+
         brnn = tf.reshape(brnn, [-1, 75*640])
 
         fc1 = tf.layers.dense(brnn, units=925, activation=tf.nn.relu)
