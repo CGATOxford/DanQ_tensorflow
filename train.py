@@ -47,7 +47,7 @@ def run_experiment(argv=None):
     
     # Define the hyperparameters
     params = tf.contrib.training.HParams(
-        learning_rate=0.001,
+        learning_rate=0.01,
         n_classes=919,
         train_steps=5000,
         min_eval_frequency=100)
@@ -85,7 +85,7 @@ def experiment_fn(run_config, params):
             batch_size=100, data=testmat, test=True)
     
     # Define the experiment
-    
+
     experiment = tf.contrib.learn.Experiment(
         estimator=estimator,
         train_input_fn=train_input_fn,
@@ -113,11 +113,9 @@ def model_fn(features, labels, mode, params):
     is_training = mode == ModeKeys.TRAIN
     
     # Define the models architecture
-    print(is_training)
-    print("\n\n\n\n\n\n\n\n")
     logits = architecture(features, is_training=is_training)
     predictions = tf.argmax(logits, axis=1)
-    
+
     # Loss functions and not needed during inference
     
     loss = None
@@ -125,8 +123,7 @@ def model_fn(features, labels, mode, params):
     eval_metric_ops = {}
     
     if mode != ModeKeys.INFER:
-        loss = tf.losses.sparse_softmax_cross_entropy(labels=tf.cast(labels, tf.int32), logits=logits)
-        
+        loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.cast(labels, tf.float32), logits=logits))
         train_op = get_train_op_fn(loss, params)
         eval_metric_ops = get_eval_metric_ops(labels, predictions)
     return tf.estimator.EstimatorSpec(mode=mode,
@@ -164,7 +161,7 @@ def get_eval_metric_ops(labels, predictions):
     """
     return {
         'Accuracy': tf.metrics.accuracy(
-            labels=labels,
+            labels=tf.reshape(labels, [919,1]),
             predictions=predictions,
             name='accuracy')
     }
@@ -187,34 +184,38 @@ def architecture(inputs, is_training, scope='DanQNN'):
     modify the implimentation for other uses if we incorporate with tensorboard.
     '''
 
-    nb_filters = 320
+    nb_filter = 320
     subsample = 1
     input_length = 1000
     border = "VALID"
     reuse = None
     max_pool_size = 13
-    max_strides = 13
+    max_strides = 1
+    filter_length = 26
+    mode = None
 
-    print(inputs)
     with tf.variable_scope(scope):
 
-        conv1d = tf.layers.conv1d(inputs, filters=nb_filter , strides=subsample, 
-                                  padding=border, kernel_size=input_length, data_format='channels_first', reuse=reuse)
-
+        conv1d = tf.layers.conv1d(tf.cast(inputs, tf.float32), filters=nb_filter, strides=subsample, 
+                                  padding=border, kernel_size=filter_length, reuse=reuse, data_format="channels_last")
+        
         max1 = tf.layers.max_pooling1d(conv1d, pool_size=max_pool_size, strides=max_strides)
         
         max1 = tf.layers.dropout(max1, rate=0.2,training=mode == tf.estimator.ModeKeys.TRAIN)
         
 
         brnn = BDNN(max1)
-        
+
+
         brnn = tf.layers.dropout(brnn, rate=0.5,training=mode == tf.estimator.ModeKeys.TRAIN)
 
         brnn = tf.contrib.layers.flatten(brnn)
-        
+        brnn = tf.reshape(brnn, [-1, 75*640])
+
         fc1 = tf.layers.dense(brnn, units=925, activation=tf.nn.relu)
         
-        fc2 = tf.layers.dense(fc1, units=919, activation=tf.nn.softmax)
+        fc2 = tf.layers.dense(fc1, units=919, activation=tf.nn.sigmoid)
+
         return fc2
 
 
@@ -266,7 +267,7 @@ def get_train_inputs(batch_size, data, test=False):
                 labels.dtype, labels.shape)
             # Build dataset iterator
             dataset = tf.contrib.data.Dataset.from_tensor_slices(
-                (DNA_placeholder, labels_placeholder))
+                (tf.reshape(DNA_placeholder, [4400000, 1000, 4]), tf.reshape(labels_placeholder, [4400000, 919])))
             dataset = dataset.repeat(None)  # Infinite iterations
             dataset = dataset.shuffle(buffer_size=10000)
             dataset = dataset.batch(batch_size)
@@ -276,7 +277,7 @@ def get_train_inputs(batch_size, data, test=False):
             iterator_initializer_hook.iterator_initializer_func = \
                 lambda sess: sess.run(
                     iterator.initializer,
-                    feed_dict={images_placeholder: DNA,
+                    feed_dict={DNA_placeholder: DNA,
                                labels_placeholder: labels})
             # Return batched (features, labels)
             return next_example, next_label
