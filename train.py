@@ -72,17 +72,17 @@ def experiment_fn(run_config, params):
     # Define the classifier
     
     estimator = get_estimator(run_config, params)
-    
+
     # Setup data loaders
     
-    trainmat = FLAGS.tain_mat
-    testmat = FLAGS.test_mat
+    trainmat = h5py.File(FLAGS.train_mat, "r")
+    testmat = scipy.io.loadmat(FLAGS.test_mat)
     
     danq_train = train_input_fn, train_input_hook = get_train_inputs(
             batch_size=100, data=trainmat, test=False)
     
     danq_test = eval_input_fn, eval_input_hook = get_train_inputs(
-            batch_size=100, data=trainmat, test=True)
+            batch_size=100, data=testmat, test=True)
     
     # Define the experiment
     
@@ -95,7 +95,7 @@ def experiment_fn(run_config, params):
         train_monitors=[train_input_hook],
         eval_hooks=[eval_input_hook],
         eval_steps=None)
-    
+
     return experiment
     
 def get_estimator(run_config, params):
@@ -113,6 +113,8 @@ def model_fn(features, labels, mode, params):
     is_training = mode == ModeKeys.TRAIN
     
     # Define the models architecture
+    print(is_training)
+    print("\n\n\n\n\n\n\n\n")
     logits = architecture(features, is_training=is_training)
     predictions = tf.argmax(logits, axis=1)
     
@@ -184,10 +186,19 @@ def architecture(inputs, is_training, scope='DanQNN'):
     We aim to have this implimented in tensorflow as it will be easier to
     modify the implimentation for other uses if we incorporate with tensorboard.
     '''
-    
+
+    nb_filters = 320
+    subsample = 1
+    input_length = 1000
+    border = "VALID"
+    reuse = None
+    max_pool_size = 13
+    max_strides = 13
+
+    print(inputs)
     with tf.variable_scope(scope):
 
-        conv1d = tf.layers.conv1d(x, filters=nb_filter , strides=subsample, 
+        conv1d = tf.layers.conv1d(inputs, filters=nb_filter , strides=subsample, 
                                   padding=border, kernel_size=input_length, data_format='channels_first', reuse=reuse)
 
         max1 = tf.layers.max_pooling1d(conv1d, pool_size=max_pool_size, strides=max_strides)
