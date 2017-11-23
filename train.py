@@ -198,7 +198,7 @@ def architecture(inputs, is_training, scope='DanQNN'):
     with tf.variable_scope(scope):
 
         conv1d = tf.layers.conv1d(tf.cast(inputs, tf.float32), filters=nb_filter, strides=subsample, 
-                                  padding=border, kernel_size=filter_length, reuse=reuse, data_format="channels_first")
+                                  padding=border, kernel_size=filter_length, reuse=reuse, data_format="channels_last")
         
         max1 = tf.layers.max_pooling1d(conv1d, pool_size=max_pool_size, strides=max_strides)
         
@@ -256,7 +256,9 @@ def get_train_inputs(batch_size, data, test=False):
         """
         with tf.name_scope('Training_data'):
             # Get  data
-            DNA = data['trainxdata']
+            # has to swap channel to the last axis for cpu.
+            # if use gpu, can tf.transpose in the slice function instead
+            DNA = np.swapaxes(np.array(data['trainxdata']).T,2,1)
             labels = data['traindata']
             # Define placeholders
             DNA_placeholder = tf.placeholder(
@@ -265,7 +267,7 @@ def get_train_inputs(batch_size, data, test=False):
                 labels.dtype, labels.shape)
             # Build dataset iterator
             dataset = tf.contrib.data.Dataset.from_tensor_slices(
-                (tf.transpose(DNA_placeholder), tf.transpose(labels_placeholder)))
+                (DNA_placeholder, tf.transpose(labels_placeholder)))
             dataset = dataset.repeat(None)  # Infinite iterations
             dataset = dataset.shuffle(buffer_size=10000)
             dataset = dataset.batch(batch_size)
