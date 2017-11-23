@@ -82,7 +82,7 @@ def experiment_fn(run_config, params):
     danq_train = train_input_fn, train_input_hook = get_train_inputs(
             batch_size=100, data=trainmat, test=False)
     
-    danq_test = eval_input_fn, eval_input_hook = get_train_inputs(
+    danq_test = eval_input_fn, eval_input_hook = get_test_inputs(
             batch_size=100, data=testmat, test=True)
     
     # Define the experiment
@@ -93,7 +93,7 @@ def experiment_fn(run_config, params):
         eval_input_fn=eval_input_fn,
         train_steps=params.train_steps,
         min_eval_frequency=params.min_eval_frequency,
-        train_monitors=[train_input_hook],
+        train_monitors=[train_input_hook], # deprecated monitor is here
         eval_hooks=[eval_input_hook],
         eval_steps=None)
 
@@ -289,19 +289,19 @@ def get_train_inputs(batch_size, data, test=False):
     # Return function and hook
     return train_inputs, iterator_initializer_hook
 
-    def get_test_inputs(batch_size, data, test=False):
-        """Return the input function to get the test data.
-        Args:
-                    batch_size (int): Batch size of training iterator that is returned
-                          by the input function.
-            data (Object): Object holding the loaded data.
-            test (boolean): if test, then load valid mat for testing purposes
-        Returns:
-            (Input function, IteratorInitializerHook):
-                - Function that returns (features, labels) when called.
-                - Hook to initialise input iterator.
-        """
-        iterator_initializer_hook = IteratorInitializerHook()
+def get_test_inputs(batch_size, data, test=False):
+    """Return the input function to get the test data.
+    Args:
+                batch_size (int): Batch size of training iterator that is returned
+                      by the input function.
+        data (Object): Object holding the loaded data.
+        test (boolean): if test, then load valid mat for testing purposes
+    Returns:
+        (Input function, IteratorInitializerHook):
+            - Function that returns (features, labels) when called.
+            - Hook to initialise input iterator.
+    """
+    iterator_initializer_hook = IteratorInitializerHook()
 
     def test_inputs():
         """Returns training set as Operations.
