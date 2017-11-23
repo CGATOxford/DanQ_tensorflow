@@ -75,6 +75,7 @@ def experiment_fn(run_config, params):
 
     # Setup data loaders
     
+    # testing, using valid_mat instead
     trainmat = h5py.File(FLAGS.train_mat, "r")
     testmat = scipy.io.loadmat(FLAGS.test_mat)
     
@@ -197,7 +198,7 @@ def architecture(inputs, is_training, scope='DanQNN'):
     with tf.variable_scope(scope):
 
         conv1d = tf.layers.conv1d(tf.cast(inputs, tf.float32), filters=nb_filter, strides=subsample, 
-                                  padding=border, kernel_size=filter_length, reuse=reuse, data_format="channels_last")
+                                  padding=border, kernel_size=filter_length, reuse=reuse, data_format="channels_first")
         
         max1 = tf.layers.max_pooling1d(conv1d, pool_size=max_pool_size, strides=max_strides)
         
@@ -255,12 +256,8 @@ def get_train_inputs(batch_size, data, test=False):
         """
         with tf.name_scope('Training_data'):
             # Get  data
-            if test:
-                DNA = data['validxdata']
-                labels = data['validdata']
-            else:
-                DNA = data['trainxdata']
-                labels = data['traindata']
+            DNA = data['trainxdata']
+            labels = data['traindata']
             # Define placeholders
             DNA_placeholder = tf.placeholder(
                 DNA.dtype, DNA.shape)
@@ -268,7 +265,7 @@ def get_train_inputs(batch_size, data, test=False):
                 labels.dtype, labels.shape)
             # Build dataset iterator
             dataset = tf.contrib.data.Dataset.from_tensor_slices(
-                (tf.reshape(DNA_placeholder, [4400000, 1000, 4]), tf.reshape(labels_placeholder, [4400000, 919])))
+                (tf.transpose(DNA_placeholder), tf.transpose(labels_placeholder)))
             dataset = dataset.repeat(None)  # Infinite iterations
             dataset = dataset.shuffle(buffer_size=10000)
             dataset = dataset.batch(batch_size)
@@ -338,11 +335,11 @@ def get_train_inputs(batch_size, data, test=False):
 
 # Run script ##############################################
 if __name__ == "__main__":
-	parser = argparse.ArgumentParser()
-	parser.add_argument("--model_dir", default=".")
-	parser.add_argument("--test_mat", default=".")
-	parser.add_argument("--train_mat", default=".")
-	FLAGS, _ = parser.parse_known_args()
-	tf.app.run(
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model_dir", default="model")
+    parser.add_argument("--test_mat", default="Data/valid.mat")
+    parser.add_argument("--train_mat", default="Data/train4test.mat")
+    FLAGS, _ = parser.parse_known_args()
+    tf.app.run(
         main=run_experiment
     )
