@@ -49,7 +49,7 @@ def run_experiment(argv=None):
     params = tf.contrib.training.HParams(
         learning_rate=0.01,
         n_classes=919,
-        train_steps=1284,
+        train_steps=100,
         min_eval_frequency=100)
     
     # set the run config and directory to save the model and stats
@@ -80,10 +80,10 @@ def experiment_fn(run_config, params):
     testmat = scipy.io.loadmat(FLAGS.test_mat)
     
     danq_train = train_input_fn, train_input_hook = get_train_inputs(
-            batch_size=1284, data=trainmat, test=False)
+            batch_size=100, data=trainmat, test=False)
     
     danq_test = eval_input_fn, eval_input_hook = get_train_inputs(
-            batch_size=1284, data=testmat, test=True)
+            batch_size=100, data=testmat, test=True)
     
     # Define the experiment
 
@@ -170,8 +170,8 @@ def get_eval_metric_ops(labels, predictions):
 def BDNN(x):
     '''Bidirectional neural network'''
     
-    forward_lstm = rnn.LSTMCell(320, reuse=tf.get_variable_scope().reuse)
-    backward_lstm = rnn.LSTMCell(320, reuse=tf.get_variable_scope().reuse)
+    forward_lstm = rnn.LSTMCell(320, state_is_tuple=True,reuse=tf.get_variable_scope().reuse)
+    backward_lstm = rnn.LSTMCell(320, state_is_tuple=True,reuse=tf.get_variable_scope().reuse)
     
     brnn, _ = tf.nn.bidirectional_dynamic_rnn(forward_lstm, backward_lstm, x, dtype=tf.float32)
 
@@ -212,7 +212,10 @@ def architecture(inputs, is_training, scope='DanQNN'):
 
         brnn = tf.contrib.layers.flatten(brnn)
 
-        brnn = tf.reshape(brnn, [-1, 75*640])
+        # original code of 75 in DanQ is something related to the batch size, 
+        #  or train steps. when 75, last layer's output gives (1284,919)
+        # so 1284 * 75 / 100  = 963 (100 is my batch size AND train step)
+        brnn = tf.reshape(brnn, [-1, 963*640])
 
         fc1 = tf.layers.dense(brnn, units=925, activation=tf.nn.relu)
         
@@ -256,9 +259,7 @@ def get_train_inputs(batch_size, data, test=False):
         """
         with tf.name_scope('Training_data'):
             # Get  data
-            # has to swap channel to the last axis for cpu.
-            # if use gpu, can tf.transpose in the slice function instead
-            DNA = np.swapaxes(np.array(data['trainxdata']).T,2,1)
+            DNA = data['trainxdata']
             labels = data['traindata']
             # Define placeholders
             DNA_placeholder = tf.placeholder(
@@ -266,8 +267,11 @@ def get_train_inputs(batch_size, data, test=False):
             labels_placeholder = tf.placeholder(
                 labels.dtype, labels.shape)
             # Build dataset iterator
+            # note that cpu only accepts NHWC, i.e. channel last, 
+            # therefore the transpose. if gpu, a plain transpose, combined with
+            # 'channels_first' for conv1d would suffice.
             dataset = tf.contrib.data.Dataset.from_tensor_slices(
-                (DNA_placeholder, tf.transpose(labels_placeholder)))
+                (tf.transpose(DNA_placeholder,[2,0,1]), tf.transpose(labels_placeholder)))
             dataset = dataset.repeat(None)  # Infinite iterations
             dataset = dataset.shuffle(buffer_size=10000)
             dataset = dataset.batch(batch_size)
