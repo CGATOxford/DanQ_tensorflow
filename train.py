@@ -50,7 +50,7 @@ def run_experiment(argv=None):
         learning_rate=0.01,
         n_classes=919,
         train_steps=100,
-        min_eval_frequency=100)
+        min_eval_frequency=10)
     
     # set the run config and directory to save the model and stats
     run_config = tf.contrib.learn.RunConfig()
@@ -145,7 +145,7 @@ def get_train_op_fn(loss, params):
     """
     return tf.contrib.layers.optimize_loss(
         loss=loss,
-        global_step=tf.contrib.framework.get_global_step(),
+        global_step=tf.train.get_global_step(),
         optimizer=tf.train.AdamOptimizer,
         learning_rate=params.learning_rate
     )
@@ -270,7 +270,7 @@ def get_train_inputs(batch_size, data, test=False):
             # note that cpu only accepts NHWC, i.e. channel last, 
             # therefore the transpose. if gpu, a plain transpose, combined with
             # 'channels_first' for conv1d would suffice.
-            dataset = tf.contrib.data.Dataset.from_tensor_slices(
+            dataset = tf.data.Dataset.from_tensor_slices(
                 (tf.transpose(DNA_placeholder,[2,0,1]), tf.transpose(labels_placeholder)))
             dataset = dataset.repeat(None)  # Infinite iterations
             dataset = dataset.shuffle(buffer_size=10000)
@@ -308,6 +308,7 @@ def get_test_inputs(batch_size, data, test=False):
         Returns:
             (features, labels) Operations that iterate over the dataset
             on every evaluation
+                (tf.transpose(DNA_placeholder,[2,0,1]), tf.transpose(labels_placeholder)))
         """
         with tf.name_scope('Test_data'):
             # Get data
@@ -323,8 +324,8 @@ def get_test_inputs(batch_size, data, test=False):
             labels_placeholder = tf.placeholder(
                 labels.dtype, labels.shape)
             # Build dataset iterator
-            dataset = tf.contrib.data.Dataset.from_tensor_slices(
-                (DNA_placeholder, labels_placeholder))
+            dataset = tf.data.Dataset.from_tensor_slices(
+                (tf.transpose(DNA_placeholder,[2,0,1]), tf.transpose(labels_placeholder)))
             dataset = dataset.batch(batch_size)
             iterator = dataset.make_initializable_iterator()
             next_example, next_label = iterator.get_next()
