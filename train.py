@@ -115,7 +115,7 @@ def model_fn(features, labels, mode, params):
     
     # Define the models architecture
     logits = architecture(features, is_training=is_training)
-    predictions = tf.argmax(logits, axis=1)
+    predictions = tf.round(tf.nn.sigmoid(logits))
 
     # Loss functions and not needed during inference
     
@@ -162,7 +162,7 @@ def get_eval_metric_ops(labels, predictions):
     """
     return {
         'Accuracy': tf.metrics.accuracy(
-            labels=tf.reshape(labels, [919,1]),
+            labels=labels,
             predictions=predictions,
             name='accuracy')
     }
