@@ -80,10 +80,10 @@ def experiment_fn(run_config, params):
     testmat = scipy.io.loadmat(FLAGS.test_mat)
     
     danq_train = train_input_fn, train_input_hook = get_train_inputs(
-            batch_size=100, data=trainmat, test=False)
+            batch_size=10, data=trainmat, test=False)
     
     danq_test = eval_input_fn, eval_input_hook = get_test_inputs(
-            batch_size=100, data=testmat, test=True)
+            batch_size=10, data=testmat, test=True)
     
     # Define the experiment
 
@@ -259,8 +259,8 @@ def get_train_inputs(batch_size, data, test=False):
         """
         with tf.name_scope('Training_data'):
             # Get  data
-            DNA = data['trainxdata']
-            labels = data['traindata']
+            DNA = np.swapaxes(np.array(data['trainxdata']).T,2,1)
+            labels = np.array(data['traindata']).T
             # Define placeholders
             DNA_placeholder = tf.placeholder(
                 DNA.dtype, DNA.shape)
@@ -271,7 +271,7 @@ def get_train_inputs(batch_size, data, test=False):
             # therefore the transpose. if gpu, a plain transpose, combined with
             # 'channels_first' for conv1d would suffice.
             dataset = tf.data.Dataset.from_tensor_slices(
-                (tf.transpose(DNA_placeholder,[2,0,1]), tf.transpose(labels_placeholder)))
+                (DNA_placeholder,labels_placeholder))
             dataset = dataset.repeat(None)  # Infinite iterations
             dataset = dataset.shuffle(buffer_size=10000)
             dataset = dataset.batch(batch_size)
@@ -311,13 +311,10 @@ def get_test_inputs(batch_size, data, test=False):
                 (tf.transpose(DNA_placeholder,[2,0,1]), tf.transpose(labels_placeholder)))
         """
         with tf.name_scope('Test_data'):
-            # Get data
-            if test:
-                DNA = data['validxdata']
-                labels = data['validdata']
-            else:
-                DNA = data['testxdata']
-                labels = data['testdata']
+            # Get data. labels need not transform, but DNA does!
+            # and a different way of transform from train data!!! need optimise!
+            DNA = np.swapaxes(data['validxdata'],1,2)
+            labels =data['validdata']
             # Define placeholders
             DNA_placeholder = tf.placeholder(
                 DNA.dtype, DNA.shape)
@@ -325,7 +322,7 @@ def get_test_inputs(batch_size, data, test=False):
                 labels.dtype, labels.shape)
             # Build dataset iterator
             dataset = tf.data.Dataset.from_tensor_slices(
-                (tf.transpose(DNA_placeholder,[2,0,1]), tf.transpose(labels_placeholder)))
+                (DNA_placeholder, labels_placeholder))
             dataset = dataset.batch(batch_size)
             iterator = dataset.make_initializable_iterator()
             next_example, next_label = iterator.get_next()
