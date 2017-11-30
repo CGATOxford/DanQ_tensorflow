@@ -330,7 +330,7 @@ def get_test_inputs(batch_size, data, test=False):
             iterator_initializer_hook.iterator_initializer_func = \
                 lambda sess: sess.run(
                     iterator.initializer,
-                    feed_dict={images_placeholder: DNA,
+                    feed_dict={DNA_placeholder: DNA,
                                labels_placeholder: labels})
             return next_example, next_label
 
