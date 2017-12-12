@@ -270,7 +270,7 @@ def get_train_inputs(batch_size, data, test=False):
             # note that cpu only accepts NHWC, i.e. channel last, 
             # therefore the transpose. if gpu, a plain transpose, combined with
             # 'channels_first' for conv1d would suffice.
-            dataset = tf.data.Dataset.from_tensor_slices(
+            dataset = tf.contrib.data.Dataset.from_tensor_slices(
                 (DNA_placeholder,labels_placeholder))
             dataset = dataset.repeat(None)  # Infinite iterations
             dataset = dataset.shuffle(buffer_size=10000)
@@ -321,7 +321,7 @@ def get_test_inputs(batch_size, data, test=False):
             labels_placeholder = tf.placeholder(
                 labels.dtype, labels.shape)
             # Build dataset iterator
-            dataset = tf.data.Dataset.from_tensor_slices(
+            dataset = tf.contrib.data.Dataset.from_tensor_slices(
                 (DNA_placeholder, labels_placeholder))
             dataset = dataset.batch(batch_size)
             iterator = dataset.make_initializable_iterator()
